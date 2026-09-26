@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.sites-runtime/
+.env
+.env.*
+!.env.example
+test-results/
+playwright-report/
+*.tsbuildinfo
+*.zip
+*.tar.gz
+.DS_Store
