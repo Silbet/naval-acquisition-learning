@@ -7,13 +7,12 @@ import {
   type Question,
   type UnitId,
 } from "./data";
-export const SESSION_KEY = "hamjeong.session.v1",
+export const SESSION_KEY = "hamjeong.session.v2",
   HISTORY_KEY = "hamjeong.history.v1";
 const sessionSchema = z.object({
-  version: z.literal(1),
+  version: z.literal(2),
   id: z.string(),
   unitId: z.enum(unitIds),
-  demo: z.boolean(),
   retry: z.boolean(),
   items: z.array(questionSchema).min(1).max(20),
   answers: z.array(z.number().int().min(0).max(3).nullable()),
@@ -29,7 +28,6 @@ export type History = {
   correct: number;
   total: number;
   completedAt: string;
-  demo: boolean;
   retry: boolean;
   weakStages: string[];
 };
@@ -44,13 +42,75 @@ export function shuffled<T>(
   }
   return a;
 }
+export function conceptCount(items: Question[]): number {
+  return new Set(items.map((q) => q.concept)).size;
+}
+
+export function selectionPlan(
+  unitId: UnitId,
+  count: number,
+  available = pool(unitId),
+) {
+  if (![5, 10, 20].includes(count)) throw Error("지원하지 않는 문제 수입니다.");
+  const commonAvailable = conceptCount(
+    available.filter((q) => q.unitId === "common-process"),
+  );
+  if (unitId === "common-process") {
+    if (commonAvailable < count)
+      throw Error("서로 다른 개념의 문제가 부족합니다.");
+    return { cases: 0, common: count };
+  }
+  const ownAvailable = conceptCount(
+    available.filter((q) => q.unitId === unitId),
+  );
+  const target = ({ 5: 4, 10: 7, 20: 15 } as Record<number, number>)[count];
+  // 부족해도 함종 비중은 절반 이상을 유지합니다. 홀수 5문항은 최소 3:2입니다.
+  const cases = Math.min(
+    ownAvailable,
+    Math.max(target, count - commonAvailable),
+  );
+  if (
+    cases < Math.ceil(count / 2) ||
+    commonAvailable < count - cases ||
+    conceptCount(available) < count
+  )
+    throw Error(
+      "함종 문제를 절반 이상 구성할 수 없습니다. 문제 수를 줄여 주세요.",
+    );
+  return { cases, common: count - cases };
+}
+
+function pickDiverse(
+  items: Question[],
+  count: number,
+  canPick: (q: Question, selected: Question[]) => boolean = () => true,
+): Question[] {
+  const unique = [
+    ...new Map(shuffled(items).map((q) => [q.concept, q])).values(),
+  ];
+  const selected: Question[] = [];
+  // 핵심 역할을 먼저 포함하고 장비·사례를 순환해 한 분야로 쏠리지 않게 합니다.
+  const buckets = ["역할·임무", "장비·원리", "획득·사례"].map((topic) =>
+    unique.filter((q) => q.topic === topic),
+  );
+  while (selected.length < count && buckets.some((b) => b.length)) {
+    for (const bucket of buckets) {
+      if (selected.length === count) break;
+      const next = bucket.pop();
+      if (next && canPick(next, selected)) selected.push(next);
+    }
+  }
+  if (selected.length !== count)
+    throw Error("서로 다른 개념의 문제가 부족합니다.");
+  return selected;
+}
+
 export function createSession(
   unitId: UnitId,
   count: number,
-  demo: boolean,
   retryIds?: string[],
 ): Session {
-  const available = pool(unitId, demo);
+  const available = pool(unitId);
   if (!retryIds && ![5, 10, 20].includes(count))
     throw Error("지원하지 않는 문제 수입니다.");
   let selected: Question[];
@@ -60,17 +120,29 @@ export function createSession(
     if (selected.length !== ids.size || selected.length !== count)
       throw Error("복습할 문제를 확인할 수 없습니다.");
   } else {
-    if (available.length < count) throw Error("검수된 문제가 부족합니다.");
-    const cases = shuffled(
+    const plan = selectionPlan(unitId, count, available);
+    const commonConcepts = new Set(
+      available
+        .filter((q) => q.unitId === "common-process")
+        .map((q) => q.concept),
+    );
+    const sharedBudget = commonConcepts.size - plan.common;
+    const cases = pickDiverse(
       available.filter((q) => q.unitId !== "common-process"),
-    ).slice(0, Math.ceil(count / 2));
-    selected = shuffled([
-      ...cases,
-      ...shuffled(available.filter((q) => q.unitId === "common-process")).slice(
-        0,
-        count - cases.length,
+      plan.cases,
+      (q, selected) =>
+        !commonConcepts.has(q.concept) ||
+        selected.filter((item) => commonConcepts.has(item.concept)).length <
+          sharedBudget,
+    );
+    const usedConcepts = new Set(cases.map((q) => q.concept));
+    const common = pickDiverse(
+      available.filter(
+        (q) => q.unitId === "common-process" && !usedConcepts.has(q.concept),
       ),
-    ]);
+      plan.common,
+    );
+    selected = shuffled([...cases, ...common]);
   }
   if (selected.length !== count || count < 1 || count > 20)
     throw Error("문제 수가 맞지 않습니다.");
@@ -86,10 +158,9 @@ export function createSession(
     };
   });
   return {
-    version: 1,
+    version: 2,
     id: crypto.randomUUID(),
     unitId,
-    demo,
     retry: !!retryIds,
     items,
     answers: Array(count).fill(null),
@@ -114,7 +185,7 @@ export function validateSession(value: unknown): Session | null {
     if (
       !original ||
       original.status === "retired" ||
-      (!s.demo && original.status !== "verified") ||
+      !["published", "verified"].includes(original.status) ||
       !(original.unitId === s.unitId || original.unitId === "common-process")
     )
       return null;
@@ -123,6 +194,10 @@ export function validateSession(value: unknown): Session | null {
       q.options.some((o) => !original.options.includes(o)) ||
       q.options[q.answerIndex] !== original.options[original.answerIndex] ||
       q.prompt !== original.prompt ||
+      q.concept !== original.concept ||
+      q.topic !== original.topic ||
+      q.stage !== original.stage ||
+      q.unitId !== original.unitId ||
       q.sourceId !== original.sourceId ||
       q.explanation !== original.explanation
     )
@@ -185,7 +260,6 @@ const historySchema = z.array(
     correct: z.number().int().nonnegative(),
     total: z.number().int().min(1).max(20),
     completedAt: z.string().datetime(),
-    demo: z.boolean(),
     retry: z.boolean(),
     weakStages: z.array(z.string()),
   }),
@@ -209,7 +283,6 @@ export function recordHistory(s: Session) {
     correct: result.correct,
     total: result.total,
     completedAt: s.completedAt,
-    demo: s.demo,
     retry: s.retry,
     weakStages: [...new Set(result.wrong.map((q) => q.stage))],
   };
