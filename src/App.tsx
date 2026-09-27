@@ -115,7 +115,17 @@ export default function App() {
   }, [location.pathname]);
   return (
     <>
-      <a className="skip-link" href="#main">
+      <a
+        className="skip-link"
+        href="#main"
+        onClick={(event) => {
+          // 해시 라우터의 URL을 변경하지 않고 본문으로 이동합니다.
+          event.preventDefault();
+          const main = document.getElementById("main");
+          main?.focus();
+          main?.scrollIntoView();
+        }}
+      >
         본문으로 바로가기
       </a>
       <header className="header">
