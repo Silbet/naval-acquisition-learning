@@ -46,6 +46,7 @@ import {
   recordHistory,
   HISTORY_KEY,
   type Session,
+  selectionPlan,
 } from "./domain";
 import { registerLearningTools } from "./webmcp";
 const icons = {
@@ -183,7 +184,7 @@ export default function App() {
       <footer>
         <span>함정길잡이</span>
         <p>
-          방위사업청 공개자료를 활용한 AI 콘테스트용 학습 프로토타입
+          공개자료로 배우는 함종의 역할과 획득절차
           <br />
           공식 교육·평가 서비스가 아닙니다. 학습기록은 이 브라우저에만
           저장됩니다.
@@ -276,12 +277,11 @@ function Home() {
               <div className="card-bottom">
                 <span>
                   {records.length
-                    ? `시연 최고 ${Math.max(...records.map((h) => h.score))}점`
+                    ? `최고 ${Math.max(...records.map((h) => h.score))}점`
                     : "아직 학습 전"}
                   <small>
-                    공통 {pool("common-process", true).length} + 사례{" "}
-                    {pool(u.id, true).filter((q) => q.unitId === u.id).length} ·
-                    시연용
+                    함종 {pool(u.id).filter((q) => q.unitId === u.id).length} ·
+                    공통 {pool("common-process").length}
                   </small>
                 </span>
                 <ArrowUpRight size={20} />
@@ -293,8 +293,8 @@ function Home() {
       <aside className="notice">
         <Info size={18} />
         <p>
-          현재는 <strong>시연용 문제은행</strong>입니다. 방위사업청 공개자료로
-          작성한 문항은 사람 검수 후 정식 학습에 반영됩니다.
+          <strong>역할부터 이해하고, 획득절차로 연결하세요.</strong> 문제를 풀고
+          나면 해설과 원문 출처를 함께 확인할 수 있습니다.
         </p>
       </aside>
     </>
@@ -304,7 +304,6 @@ function Setup() {
   const { unitId } = useParams();
   const unit = units.find((u) => u.id === unitId);
   const [count, setCount] = useState(5),
-    [demo, setDemo] = useState(false),
     [error, setError] = useState("");
   const navigate = useNavigate();
   if (!unit)
@@ -314,16 +313,17 @@ function Setup() {
         text="단원 목록에서 다시 선택해 주세요."
       />
     );
-  const available = pool(unit.id, demo);
-  const caseCount = Math.min(
-    available.filter(
-      (q) => q.unitId === unit.id && q.unitId !== "common-process",
-    ).length,
-    Math.ceil(count / 2),
-  );
+  const plans = ([5, 10, 20] as const).map((n) => {
+    try {
+      return selectionPlan(unit.id, n);
+    } catch {
+      return null;
+    }
+  });
+  const plan = plans[[5, 10, 20].indexOf(count)];
   function start() {
     try {
-      const session = createSession(unit!.id, count, demo);
+      const session = createSession(unit!.id, count);
       if (!saveSession(session)) {
         setError(
           "브라우저의 세션 저장을 사용할 수 없습니다. 사이트 저장소를 허용하고 다시 시도해 주세요.",
@@ -353,25 +353,11 @@ function Setup() {
         <p className="muted">
           모두 4지선다입니다. 문제와 보기는 매번 새롭게 섞입니다.
         </p>
-        <label className="demo-consent">
-          <input
-            type="checkbox"
-            checked={demo}
-            onChange={(e) => setDemo(e.target.checked)}
-          />
-          <span>
-            <strong>시연용 문제로 연습하기</strong>
-            <small>
-              사람 검수 전 문항임을 확인했습니다. 정식 검수 완료:{" "}
-              {pool(unit.id).length}개
-            </small>
-          </span>
-        </label>
         <fieldset className="count-group">
           <legend className="sr-only">문제 수 선택</legend>
           {([5, 10, 20] as const).map((n, i) => (
             <label
-              className={`count-option ${count === n ? "selected" : ""} ${available.length < n ? "unavailable" : ""}`}
+              className={`count-option ${count === n ? "selected" : ""} ${!plans[i] ? "unavailable" : ""}`}
               key={n}
             >
               <input
@@ -379,7 +365,7 @@ function Setup() {
                 name="count"
                 value={n}
                 checked={count === n}
-                disabled={available.length < n}
+                disabled={!plans[i]}
                 onChange={() => setCount(n)}
               />
               <span className="count-number">
@@ -395,18 +381,14 @@ function Setup() {
             </label>
           ))}
         </fieldset>
-        {!demo && (
-          <p className="hint">
-            정식 문제은행은 검수 중입니다. 시연용 연습을 선택하면 5·10·20문제를
-            풀 수 있습니다.
-          </p>
-        )}
         <div className="setup-summary">
           <span>출제 구성</span>
           <strong>
             {unit.id === "common-process"
               ? "공통 획득절차"
-              : `함종 사례 ${caseCount} + 공통 절차 ${count - caseCount}`}
+              : plan
+                ? `함종 핵심·사례 ${plan.cases} + 공통 절차 ${plan.common}`
+                : "문제 수를 줄여 주세요"}
           </strong>
         </div>
         {error && (
@@ -414,11 +396,7 @@ function Setup() {
             {error}
           </p>
         )}
-        <button
-          className="primary full"
-          disabled={available.length < count}
-          onClick={start}
-        >
+        <button className="primary full" disabled={!plan} onClick={start}>
           학습 시작하기 <ArrowRight size={18} />
         </button>
         <p className="center hint">
@@ -513,8 +491,7 @@ function Quiz() {
           <X size={18} /> 학습 종료
         </Link>
         <span>
-          {titleOf(session.unitId)}{" "}
-          {session.demo && <b className="demo-tag">시연</b>}
+          {titleOf(session.unitId)} <b className="stage-tag">{q.topic}</b>
         </span>
       </div>
       <div className="progress-label">
@@ -582,9 +559,7 @@ function Quiz() {
           </button>
         </div>
       </section>
-      <p className="center hint">
-        공개자료 기반 시연용 연습 · 정답과 출처는 제출 후 확인합니다.
-      </p>
+      <p className="center hint">정답과 해설·출처는 제출 후 확인합니다.</p>
       {blocker.state === "blocked" && (
         <Dialog
           title="이번 학습을 종료할까요?"
@@ -612,7 +587,6 @@ function Result({ review = false }: { review?: boolean }) {
       const session = createSession(
         s!.unitId,
         wrong ? r.wrong.length : s!.items.length,
-        s!.demo,
         wrong
           ? r.wrong.map((q) => q.id)
           : s!.retry
@@ -629,7 +603,7 @@ function Result({ review = false }: { review?: boolean }) {
     <div className="result-wrap">
       <div className="result-heading">
         <span className="eyebrow">
-          {s.demo ? "시연용 학습 결과" : "학습 결과"} · {titleOf(s.unitId)}
+          학습 결과 · {titleOf(s.unitId)}
           {s.retry ? " · 오답 재도전" : ""}
         </span>
         <h1>
@@ -680,8 +654,7 @@ function Result({ review = false }: { review?: boolean }) {
               : "모든 문제를 맞혔습니다. 다른 함종의 사례도 살펴보세요."}
           </p>
           <span className="hint">
-            {date(s.completedAt)} 완료 ·{" "}
-            {s.demo ? "사람 검수 전 시연 문항" : "검수 완료 문항"}
+            {date(s.completedAt)} 완료 · 공개자료 기반 학습
           </span>
         </div>
       </section>
@@ -744,13 +717,13 @@ function Result({ review = false }: { review?: boolean }) {
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  방위사업청 · {source.title} <ExternalLink size={14} />
+                  {source.publisher} · {source.title} <ExternalLink size={14} />
                   <span className="sr-only">(새 창)</span>
                 </a>
                 <div className="review-footer">
                   <small>
                     {source.date ? `자료 게시 ${source.date}` : "게시일 미표기"}{" "}
-                    · 근거 확인 2026-09-26
+                    · 근거 확인 {q.evidenceCheckedAt}
                   </small>
                   <label>
                     <input
@@ -876,8 +849,8 @@ function ProcessMap() {
       <section className="sources-section">
         <h2>문제은행의 공개 출처</h2>
         <p className="muted">
-          총 {Object.keys(sources).length}개 출처 · AI 근거 대조 2026-09-26 ·
-          사람 검수 대기
+          총 {Object.keys(sources).length}개 출처 · 정부·해군 공개자료와
+          방산업체 공식 기술 소개
         </p>
         {Object.entries(sources).map(([id, s]) => (
           <a
@@ -889,7 +862,9 @@ function ProcessMap() {
           >
             <span>
               {s.title}
-              <small>방위사업청 · {s.date || "게시일 미표기"}</small>
+              <small>
+                {s.publisher} · {s.date || "게시일 미표기"}
+              </small>
             </span>
             <ExternalLink size={17} />
             <span className="sr-only">새 창</span>
@@ -918,10 +893,7 @@ function LearningHistory() {
         <div>
           <p className="eyebrow">조금씩 쌓이는 나의 항해</p>
           <h1>학습 기록</h1>
-          <p className="muted">
-            이 브라우저에 저장된 최근 100회 기록입니다. 시연 결과는 공식 평가가
-            아닙니다.
-          </p>
+          <p className="muted">이 브라우저에 저장된 최근 100회 기록입니다.</p>
         </div>
         {history.length > 0 && (
           <button className="text-button" onClick={() => setConfirm(true)}>
@@ -985,8 +957,7 @@ function LearningHistory() {
                     {titleOf(h.unitId)} {h.retry && <small>오답 재도전</small>}
                   </h3>
                   <p>
-                    {date(h.completedAt)} · {h.correct}/{h.total}문제 ·{" "}
-                    {h.demo ? "시연" : "정식"}
+                    {date(h.completedAt)} · {h.correct}/{h.total}문제
                   </p>
                 </div>
                 <strong>

@@ -3,8 +3,7 @@ async function start(page: Page, count = 5) {
   await page.goto("/setup/destroyer");
   await expect(
     page.getByRole("button", { name: "학습 시작하기" }),
-  ).toBeDisabled();
-  await page.getByRole("checkbox", { name: "시연용 문제로 연습하기" }).check();
+  ).toBeEnabled();
   await page.locator(`input[name="count"][value="${count}"]`).check();
   await page.getByRole("button", { name: "학습 시작하기" }).click();
   await expect(page).toHaveURL(/\/quiz$/);
@@ -14,11 +13,10 @@ test("단원부터 채점, 오답 복습과 재도전, 학습기록까지", asyn
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await page.getByRole("link", { name: /UNIT 01 구축함/ }).click();
-  await page.getByRole("checkbox", { name: "시연용 문제로 연습하기" }).check();
   await page.getByRole("button", { name: "학습 시작하기" }).click();
   for (let i = 0; i < 5; i++) {
     const index = await page.evaluate((i) => {
-      const s = JSON.parse(sessionStorage.getItem("hamjeong.session.v1")!);
+      const s = JSON.parse(sessionStorage.getItem("hamjeong.session.v2")!);
       return (s.items[i].answerIndex + 1) % 4;
     }, i);
     await expect(
@@ -35,7 +33,7 @@ test("단원부터 채점, 오답 복습과 재도전, 학습기록까지", asyn
   await expect(page.locator(".review-card")).toHaveCount(5);
   await expect(page.locator(".source-link").first()).toHaveAttribute(
     "href",
-    /^https:\/\/www.dapa.go.kr\//,
+    /^https:\/\//,
   );
   await page.getByRole("button", { name: "틀린 문제 다시 풀기" }).click();
   await expect(page).toHaveURL(/\/quiz$/);
@@ -51,13 +49,13 @@ test("10문제 새로고침 복원, 종료 취소, 360px 넘침 없음", async (
   await page.getByRole("radio").nth(2).check();
   await page.getByRole("button", { name: "다음 문제" }).click();
   const before = await page.evaluate(() =>
-    sessionStorage.getItem("hamjeong.session.v1"),
+    sessionStorage.getItem("hamjeong.session.v2"),
   );
   page.on("dialog", (d) => d.accept());
   await page.reload();
   await expect(page.locator(".question-number")).toHaveText("QUESTION 02");
   expect(
-    await page.evaluate(() => sessionStorage.getItem("hamjeong.session.v1")),
+    await page.evaluate(() => sessionStorage.getItem("hamjeong.session.v2")),
   ).toBe(before);
   await page.getByRole("link", { name: "학습 종료" }).click();
   await page.getByRole("button", { name: "취소", exact: true }).click();
@@ -76,7 +74,7 @@ test("잘못된 주소·세션과 20문제 설정", async ({ page }) => {
   await start(page, 20);
   await expect(page.getByRole("progressbar")).toHaveAttribute("max", "20");
   await page.evaluate(() =>
-    sessionStorage.setItem("hamjeong.session.v1", '{"version":99}'),
+    sessionStorage.setItem("hamjeong.session.v2", '{"version":99}'),
   );
   page.on("dialog", (d) => d.accept());
   await page.reload();

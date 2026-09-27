@@ -10,8 +10,8 @@ test("Pages 하위 경로 자산, 직접 진입, 새로고침, 채점", async ({
   await page.goto("./#/setup/destroyer");
   await expect(
     page.getByRole("button", { name: "학습 시작하기" }),
-  ).toBeDisabled();
-  await page.getByRole("checkbox", { name: "시연용 문제로 연습하기" }).check();
+  ).toBeEnabled();
+  await expect(page.getByText(/시연/)).toHaveCount(0);
   await page.getByRole("button", { name: "학습 시작하기" }).click();
   await expect(page).toHaveURL(/naval-acquisition-learning\/#\/quiz$/);
   await page.getByRole("radio").first().check();
@@ -20,6 +20,9 @@ test("Pages 하위 경로 자산, 직접 진입, 새로고침, 채점", async ({
   await page.reload();
   await expect(page.locator(".question-number")).toHaveText("QUESTION 02");
   for (let i = 1; i < 5; i++) {
+    await expect(page.locator(".question-number")).toHaveText(
+      `QUESTION ${String(i + 1).padStart(2, "0")}`,
+    );
     await page.getByRole("radio").first().check();
     await page
       .getByRole("button", { name: i === 4 ? "답안 제출" : "다음 문제" })

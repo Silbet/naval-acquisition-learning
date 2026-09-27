@@ -20,7 +20,6 @@ test("홈·설정·문제·결과·절차 맵의 WCAG AA 자동 점검", async (
   await check();
   await page.goto("/setup/common-process");
   await check();
-  await page.getByRole("checkbox", { name: "시연용 문제로 연습하기" }).check();
   await page.getByRole("button", { name: "학습 시작하기" }).click();
   await check();
   for (let i = 0; i < 5; i++) {
