@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { humanReviews, retiredIds } from "./reviews";
+import { additionalRows, additionalSources } from "./content-expansion";
 export const unitIds = [
   "common-process",
   "destroyer",
@@ -21,35 +22,35 @@ export const units = [
   {
     id: "destroyer",
     title: "구축함",
-    summary: "기본설계에서 선도함 건조까지",
+    summary: "대공·대잠·대함 임무와 전투체계",
     icon: "shield",
     label: "수상 전력",
   },
   {
     id: "frigate",
     title: "호위함",
-    summary: "함정 인도와 시험평가의 연결",
+    summary: "해역 방어·호위와 대잠 장비",
     icon: "anchor",
     label: "수상 전력",
   },
   {
     id: "amphibious",
     title: "상륙함",
-    summary: "건조부터 전력화까지의 여정",
+    summary: "상륙부대 수송·지휘와 상륙수단",
     icon: "waves",
     label: "상륙 전력",
   },
   {
     id: "submarine",
     title: "잠수함",
-    summary: "수중 전력의 획득 과정",
+    summary: "수중 임무·은밀성과 추진체계",
     icon: "compass",
     label: "수중 전력",
   },
   {
     id: "mine-warfare",
     title: "기뢰전함",
-    summary: "함정과 탑재장비의 체계통합",
+    summary: "안전한 바닷길과 기뢰대항체계",
     icon: "route",
     label: "기뢰 대응",
   },
@@ -69,7 +70,7 @@ export const units = [
 }[];
 const doc = (id: number) =>
   `https://www.dapa.go.kr/dapa/doc/selectDoc.do?bbsSeq=326&docSeq=${id}&menuSeq=3069`;
-export const sources = {
+const dapaSources = {
   management: {
     title: "사업관리",
     url: "https://www.dapa.go.kr/dapa/page/selectPage.do?menuSeq=3209&pageSeq=3195",
@@ -131,6 +132,20 @@ export const sources = {
     date: "2024-11-01",
   },
 } as const;
+export const sources = {
+  ...(Object.fromEntries(
+    Object.entries(dapaSources).map(([id, source]) => [
+      id,
+      { ...source, publisher: "방위사업청" },
+    ]),
+  ) as {
+    [K in keyof typeof dapaSources]: (typeof dapaSources)[K] & {
+      publisher: string;
+    };
+  }),
+  ...additionalSources,
+};
+export const topics = ["역할·임무", "장비·원리", "획득·사례"] as const;
 export const stages = [
   "소요·전략",
   "선행연구",
@@ -143,6 +158,8 @@ export const stages = [
 export const questionSchema = z.object({
   id: z.string().min(1),
   unitId: z.enum(unitIds),
+  topic: z.enum(topics),
+  concept: z.string().min(1),
   stage: z.enum(stages),
   prompt: z.string().min(5),
   options: z.tuple([
@@ -156,7 +173,7 @@ export const questionSchema = z.object({
   sourceId: z.enum(
     Object.keys(sources) as [keyof typeof sources, ...(keyof typeof sources)[]],
   ),
-  status: z.enum(["draft", "verified", "retired"]),
+  status: z.enum(["draft", "published", "verified", "retired"]),
   evidenceCheckedAt: z.string(),
   reviewedBy: z.string().optional(),
   verifiedAt: z.string().optional(),
@@ -808,40 +825,82 @@ const rows: Record<UnitId, Row[]> = {
     ],
   ],
 };
-export const questions: Question[] = unitIds
-  .flatMap((unitId) =>
+const legacyTopics: Partial<Record<UnitId, Record<number, Question["topic"]>>> =
+  {
+    frigate: { 6: "장비·원리" },
+    amphibious: { 5: "역할·임무" },
+    "mine-warfare": { 4: "역할·임무" },
+    "support-rescue": {
+      1: "역할·임무",
+      2: "역할·임무",
+      6: "장비·원리",
+      12: "역할·임무",
+    },
+  };
+// 같은 근거를 바꿔 묻는 기존·추가 문항은 같은 개념으로 묶습니다.
+const legacyConcepts: Record<string, string> = {
+  "q-destroyer-0002": "ddg-delivery-sequence",
+  "q-destroyer-0003": "ddg-delivery-sequence",
+  "q-frigate-0002": "ffg-lead-follow",
+  "q-mine-warfare-0004": "mine-mhc-msh",
+  "q-support-rescue-0001": "support-replenishment",
+  "q-support-rescue-0002": "support-replenishment",
+  "q-support-rescue-0005": "support-user-feedback",
+};
+export const questions: Question[] = [
+  ...unitIds.flatMap((unitId) =>
     rows[unitId].map((r, i) => ({
       id: `q-${unitId}-${String(i + 1).padStart(4, "0")}`,
       unitId,
+      topic: legacyTopics[unitId]?.[i + 1] ?? "획득·사례",
+      concept:
+        legacyConcepts[`q-${unitId}-${String(i + 1).padStart(4, "0")}`] ??
+        `legacy-${unitId}-${i + 1}`,
       stage: r[0],
       prompt: r[1],
       options: [r[2], r[3], r[4], r[5]] as Question["options"],
       answerIndex: 0,
       explanation: r[6],
       sourceId: r[7],
-      status: "draft",
+      status: "published",
       evidenceCheckedAt:
         r[7] === "rescueLaunch" || r[7] === "rescueDelivery"
           ? "2026-09-27"
           : "2026-09-26",
     })),
-  )
-  .map((q) => {
-    const review = humanReviews[q.id];
-    return {
-      ...q,
-      status: retiredIds.includes(q.id)
-        ? "retired"
-        : review
-          ? "verified"
-          : "draft",
-      ...review,
-    } as Question;
-  });
-export function pool(unitId: UnitId, demo = false) {
+  ),
+  ...unitIds.flatMap((unitId) =>
+    (additionalRows[unitId] ?? []).map((r) => ({
+      id: `q-${unitId}-${r[0]}`,
+      unitId,
+      concept: r[0],
+      topic: r[1],
+      sourceId: r[2],
+      prompt: r[3],
+      options: [r[4], r[5], r[6], r[7]] as Question["options"],
+      answerIndex: 0,
+      explanation: r[8],
+      stage: r[1] === "획득·사례" ? "계약·사업관리" : "운용·지원",
+      evidenceCheckedAt: "2026-09-27",
+      status: "published",
+    })),
+  ),
+].map((q) => {
+  const review = humanReviews[q.id];
+  return {
+    ...q,
+    status: retiredIds.includes(q.id)
+      ? "retired"
+      : review
+        ? "verified"
+        : "published",
+    ...review,
+  } as Question;
+});
+export function pool(unitId: UnitId) {
   return questions.filter(
     (q) =>
       (q.unitId === unitId || q.unitId === "common-process") &&
-      (q.status === "verified" || (demo && q.status === "draft")),
+      (q.status === "verified" || q.status === "published"),
   );
 }

@@ -25,9 +25,6 @@ try {
       await page.evaluate(() => !!document.modelContext?.registerTool),
     );
     await page.goto("http://127.0.0.1:5173/setup/destroyer");
-    await page
-      .getByRole("checkbox", { name: "시연용 문제로 연습하기" })
-      .check();
     await page.getByRole("button", { name: "학습 시작하기" }).click();
     await page.screenshot({
       path: `.sites-runtime/qa/${name}-quiz.png`,
