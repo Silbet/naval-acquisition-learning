@@ -4,6 +4,8 @@
 
 서비스: https://silbet.github.io/naval-acquisition-learning/
 
+친구·후임 개발자에게 전달할 때는 [인수인계 안내](docs/HANDOFF.md)를 먼저 확인하세요. 최신 코드는 기본 브랜치 `main`에 있으며, `main` 변경이 GitHub Pages에 자동 배포됩니다.
+
 ## 학습 흐름
 
 단원 선택 → 5·10·20문항 선택 → 풀이 → 채점 → 해설·출처 확인 → 오답 재도전. 별도 동의 체크 없이 시작합니다. 학습 종료 확인, 키보드 1–4/Enter, 모바일 화면, 새로고침 복구, 최근 100회 기록을 지원합니다.
@@ -61,8 +63,8 @@ npm run preview -- --mode pages
 
 ## 배포와 Git
 
-기능 브랜치 → 기능별 한글 커밋 → 푸시 → `[Feature] ...` PR 순서를 따릅니다. 이번 변경은 기존 구현 브랜치에서 분기한 `feat/ship-role-release`에서 관리합니다. 기존 구현 PR이 아직 main에 병합되지 않았으므로 변경 PR의 비교 기준은 `feat/ship-acquisition-learning-web`입니다.
+기능 브랜치 → 기능별 한글 커밋 → 푸시 → `[Feature] ...` PR 순서를 따릅니다. 최신 구현과 문항 보강은 `main`에 통합했습니다. 새 작업은 최신 `main`에서 브랜치를 만들고 PR 대상도 `main`으로 지정합니다.
 
-GitHub Actions의 `pages.yml`은 단위 테스트·Pages 빌드·브라우저 테스트 후 배포합니다. 이 버전의 자동 배포 대상은 `main`과 `feat/ship-role-release`입니다. github-pages 환경에서도 배포 브랜치를 허용해야 합니다. 기존 구현 브랜치의 배포 권한은 제거해 이전 버전이 사이트를 덮어쓰지 않게 합니다. PR들을 main에 병합한 후에는 배포 대상을 main으로 정리할 수 있습니다. 별도 호스팅 계정·API 키는 필요하지 않습니다.
+GitHub Actions의 `pages.yml`은 단위 테스트·Pages 빌드·브라우저 테스트 후 배포합니다. 자동 배포 대상과 github-pages 환경의 허용 브랜치는 `main`입니다. 기능 브랜치는 검증 후 PR을 통해 main에 병합합니다. 수동 실행도 main에서 실행해야 합니다. 별도 호스팅 계정·API 키는 필요하지 않습니다.
 
 기관의 공식 교육·평가 서비스는 아닙니다. 학습 기록은 로컬에만 저장하며 서버 점수 검증은 제공하지 않습니다. 실험적 WebMCP는 지원 브라우저에서 단원 목록과 문제 수만 제공합니다.
