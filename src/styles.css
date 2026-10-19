@@ -1316,3 +1316,66 @@ footer,
 .count-option > span:last-of-type {
   color: #536b7a;
 }
+
+.feedback-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(250px, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+.feedback-panel {
+  min-width: 0;
+  padding: 24px;
+}
+.feedback-frame {
+  display: block;
+  width: 100%;
+  height: 720px;
+  border: 0;
+}
+.feedback-fallback {
+  margin: 16px 0 0;
+}
+.feedback-fallback a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: #00665e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.feedback-guide h3 {
+  margin: 26px 0 8px;
+  font-size: 1rem;
+}
+.feedback-guide p {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.feedback-storage-note {
+  margin-bottom: 0;
+}
+.feedback-storage-note p {
+  font-size: 0.86rem;
+}
+.feedback-unavailable {
+  padding: 45px 0;
+  text-align: center;
+}
+.feedback-unavailable h2 {
+  margin-top: 20px;
+}
+@media (max-width: 760px) {
+  .header nav {
+    flex-wrap: wrap;
+    column-gap: 20px;
+    row-gap: 0;
+  }
+  .feedback-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .feedback-panel {
+    padding: 16px;
+  }
+}
