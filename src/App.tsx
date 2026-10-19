@@ -49,6 +49,7 @@ import {
   selectionPlan,
 } from "./domain";
 import { registerLearningTools } from "./webmcp";
+import FeedbackPage from "./FeedbackPage";
 const icons = {
   book: BookOpen,
   shield: Shield,
@@ -112,7 +113,7 @@ export default function App() {
   useEffect(registerLearningTools, []);
   useEffect(() => {
     window.scrollTo(0, 0);
-    document.title = `${location.pathname.startsWith("/quiz") ? "문제 풀기" : location.pathname.startsWith("/result") ? "학습 결과" : "획득절차 학습"} · 함정길잡이`;
+    document.title = `${location.pathname === "/feedback" ? "피드백 보내기" : location.pathname.startsWith("/quiz") ? "문제 풀기" : location.pathname.startsWith("/result") ? "학습 결과" : "획득절차 학습"} · 함정길잡이`;
   }, [location.pathname]);
   return (
     <>
@@ -158,6 +159,12 @@ export default function App() {
           >
             학습 기록
           </NavLink>
+          <NavLink
+            to="/feedback"
+            className={({ isActive }) => (isActive ? "nav-active" : "")}
+          >
+            피드백
+          </NavLink>
         </nav>
         <span className="edition">LEARNING LOG / 01</span>
       </header>
@@ -170,6 +177,7 @@ export default function App() {
           <Route path="/result/review" element={<Result review />} />
           <Route path="/map" element={<ProcessMap />} />
           <Route path="/history" element={<LearningHistory />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
           <Route
             path="*"
             element={
@@ -192,6 +200,7 @@ export default function App() {
         <Link to="/map">
           공개 출처 보기 <ExternalLink size={12} />
         </Link>
+        <Link to="/feedback">피드백 보내기</Link>
       </footer>
     </>
   );

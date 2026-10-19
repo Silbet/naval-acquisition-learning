@@ -26,7 +26,7 @@
 
 ## 처음 실행하기
 
-Git과 Node.js 24를 준비합니다. 이 프로젝트에는 서버·데이터베이스·유료 API 계정·환경변수 파일이 필요하지 않습니다.
+Git과 Node.js 24를 준비합니다. 학습 기능에는 서버·데이터베이스·유료 API 계정·환경변수 파일이 필요하지 않습니다. 피드백은 무료 Tally 폼에 저장하며 운영자는 폼 소유 계정으로 제출 내용을 관리합니다. [피드백 운영 안내](feedback.md)를 확인하세요.
 
 ```sh
 git clone https://github.com/Silbet/naval-acquisition-learning.git
@@ -48,6 +48,7 @@ npm run dev
 | 검수 기록·문항 사용 중단 | `src/reviews.ts` |
 | 출제 비율·채점·저장 | `src/domain.ts` |
 | Pages 경로·라우터 | `vite.config.ts`, `src/main.tsx` |
+| 피드백 화면·외부 폼 연결 | `src/FeedbackPage.tsx`, `src/feedback-settings.json` |
 | 자동 검증·배포 | `.github/workflows/` |
 
 현재 총 146문항, 7개 단원, 26개 출처입니다. 함종별 5·10·20문항 구성은 함종:공통 = 4:1·7:3·15:5이고, 같은 개념은 한 회차에 하나만 출제합니다. 자세한 보충 규칙은 README를 확인합니다.

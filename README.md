@@ -1,6 +1,6 @@
 # 함정길잡이
 
-함종의 역할과 장비, 함정사업 획득절차를 배우는 React·TypeScript·Vite 학습 웹입니다. 로그인·백엔드·실시간 AI 호출 없이 동작합니다.
+함종의 역할과 장비, 함정사업 획득절차를 배우는 React·TypeScript·Vite 학습 웹입니다. 학습은 로그인·백엔드·실시간 AI 호출 없이 동작하며, 피드백은 외부 설문 서비스 Tally에 저장합니다.
 
 서비스: https://silbet.github.io/naval-acquisition-learning/
 
@@ -60,6 +60,14 @@ npm run preview -- --mode pages
 ## 저장
 
 진행 회차는 `hamjeong.session.v2`에 저장됩니다. 문항 구조가 달라 이전 v1 진행 회차는 이어서 사용하지 않습니다. 완료 기록은 기존 `hamjeong.history.v1`을 그대로 읽어 보존하며 이전 구분 배지는 표시하지 않습니다. 같은 탭의 새로고침을 복구하고, 기록 삭제 기능을 제공합니다. 다른 브라우저·기기와 동기화하지 않습니다.
+
+## 피드백 접수
+
+Pages의 `/naval-acquisition-learning/#/feedback`에 로그인 없이 제출하는 Tally 양식을 삽입합니다. 학습 기록과 달리 제출한 의견은 Tally 서버에 저장되어 운영자 계정에서 확인할 수 있습니다. 이름·연락처는 수집하지 않으며 의견은 공개 게시하지 않습니다. 제출 완료 화면을 확인해야 접수된 것이며, 폼을 열거나 내용만 작성한 상태를 저장 성공으로 표시하지 않습니다.
+
+설정은 `src/feedback-settings.json`의 공개 `tallyFormId`입니다. API 키나 비밀번호를 넣지 않습니다. 개발·테스트 시 `VITE_TALLY_FORM_ID`로 대체할 수 있고, 비어 있거나 잘못된 ID면 접수 준비 중 안내만 표시합니다. 폼이 차단되는 브라우저를 위해 새 탭으로 여는 링크도 제공합니다.
+
+운영자는 [Tally 폼 관리](https://tally.so/forms/X5lb1e/submissions)에서 본인 계정으로 로그인해 의견을 확인합니다. 무료 요금제의 기본 폼·응답 저장·사이트 삽입만 사용하며, 유료 구독·브랜딩 제거·커스텀 도메인은 사용하지 않습니다. 자세한 설정과 저장 확인 방법은 [피드백 운영 안내](docs/feedback.md)를 확인하세요.
 
 ## 배포와 Git
 
