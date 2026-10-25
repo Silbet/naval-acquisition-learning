@@ -20,7 +20,7 @@ test("함정·공통 카테고리 분리와 공통 상황형의 해설·근거·
   await page.getByRole("button", { name: "종료하기", exact: true }).click();
   await page.getByRole("link", { name: "공통 업무 문제", exact: true }).click();
   await expect(page).toHaveURL(/\/common$/);
-  await expect(page.locator(".unit-grid .unit-card")).toHaveCount(3);
+  await expect(page.locator(".unit-grid .unit-card")).toHaveCount(4);
   await expect(page.getByText(/실제 기출문제가 아닙니다/)).toBeVisible();
   const axe = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])

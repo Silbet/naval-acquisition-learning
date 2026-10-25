@@ -6,6 +6,10 @@ import {
   businessSources,
   shipScenarios,
 } from "./business-content";
+import {
+  terminologyQuestions,
+  terminologySources,
+} from "./terminology-content";
 export const unitIds = [
   "common-process",
   "destroyer",
@@ -16,6 +20,7 @@ export const unitIds = [
   "support-rescue",
   "common-contract",
   "common-management",
+  "common-terms",
 ] as const;
 export type UnitId = (typeof unitIds)[number];
 export const units = [
@@ -82,6 +87,14 @@ export const units = [
     icon: "compass",
     label: "공통 업무",
   },
+  {
+    id: "common-terms",
+    title: "방위사업 용어 퀴즈",
+    summary:
+      "정의·사용 상황을 읽고 비슷한 용어를 구별합니다. 소요·계약·시험평가·군수지원 120개 용어",
+    icon: "book",
+    label: "공통 업무",
+  },
 ] satisfies {
   id: UnitId;
   title: string;
@@ -90,6 +103,9 @@ export const units = [
   label: string;
 }[];
 export const isCommonUnit = (id: UnitId) => id.startsWith("common-");
+export const isTerminologyUnit = (id: UnitId) => id === "common-terms";
+export const isScenarioUnit = (id: UnitId) =>
+  isCommonUnit(id) && !isTerminologyUnit(id);
 export const shipUnits = units.filter((u) => !isCommonUnit(u.id));
 export const commonUnits = units.filter((u) => isCommonUnit(u.id));
 const doc = (id: number) =>
@@ -169,12 +185,14 @@ export const sources = {
   }),
   ...additionalSources,
   ...businessSources,
+  ...terminologySources,
 };
 export const topics = [
   "역할·임무",
   "장비·원리",
   "획득·사례",
   "실무·상황",
+  "용어·개념",
 ] as const;
 export const stages = [
   "소요·전략",
@@ -920,6 +938,7 @@ export const questions: Question[] = [
   ),
   ...businessQuestions,
   ...shipScenarios,
+  ...terminologyQuestions,
 ].map((q) => {
   const review = humanReviews[q.id];
   return {

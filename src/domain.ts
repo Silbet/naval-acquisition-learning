@@ -7,6 +7,7 @@ import {
   type Question,
   type UnitId,
   isCommonUnit,
+  topics,
 } from "./data";
 export const SESSION_KEY = "hamjeong.session.v2",
   HISTORY_KEY = "hamjeong.history.v1";
@@ -75,8 +76,8 @@ function pickDiverse(
   ];
   const selected: Question[] = [];
   // 핵심 역할을 먼저 포함하고 장비·사례를 순환해 한 분야로 쏠리지 않게 합니다.
-  const buckets = ["역할·임무", "장비·원리", "획득·사례", "실무·상황"].map(
-    (topic) => unique.filter((q) => q.topic === topic),
+  const buckets = topics.map((topic) =>
+    unique.filter((q) => q.topic === topic),
   );
   while (selected.length < count && buckets.some((b) => b.length)) {
     for (const bucket of buckets) {
