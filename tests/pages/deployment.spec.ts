@@ -39,3 +39,31 @@ test("Pages 하위 경로 자산, 직접 진입, 새로고침, 채점", async ({
   ).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test("Pages 공통 업무 직접 진입과 계약 상황형·근거 확인", async ({ page }) => {
+  await page.goto("./#/common");
+  await expect(
+    page.getByRole("heading", { name: "공통 업무 문제", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".unit-card")).toHaveCount(3);
+  await page.goto("./#/setup/common-contract");
+  await page.reload();
+  await expect(page.locator(".setup-summary")).toContainText(
+    "계약관리 실무 상황형 5문항",
+  );
+  await page.getByRole("button", { name: "학습 시작하기" }).click();
+  await expect(page.getByText("공통 업무 · 실무 상황형")).toBeVisible();
+  for (let i = 0; i < 5; i++) {
+    await page.getByRole("radio").first().check();
+    await page
+      .getByRole("button", { name: i === 4 ? "답안 제출" : "다음 문제" })
+      .click();
+  }
+  await page.getByRole("link", { name: /오답 복습하기|해설 확인하기/ }).click();
+  await expect(page.locator(".work-steps").first()).toBeVisible();
+  await expect(page.locator(".citation").first()).toBeVisible();
+  await expect(page.locator(".source-link").first()).toHaveAttribute(
+    "href",
+    /^https:\/\/www\.law\.go\.kr\//,
+  );
+});

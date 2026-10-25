@@ -1,4 +1,4 @@
-import { units, pool } from "./data";
+import { units, pool, isCommonUnit } from "./data";
 type Registry = {
   registerTool: (
     tool: {
@@ -40,8 +40,9 @@ export function registerLearningTools() {
               id: u.id,
               title: u.title,
               questionCount: pool(u.id).length,
-              shipQuestionCount: pool(u.id).filter((q) => q.unitId === u.id)
-                .length,
+              category: isCommonUnit(u.id) ? "공통 업무" : "함정사업",
+              shipQuestionCount: isCommonUnit(u.id) ? 0 : pool(u.id).length,
+              commonQuestionCount: isCommonUnit(u.id) ? pool(u.id).length : 0,
             }));
           },
         },
