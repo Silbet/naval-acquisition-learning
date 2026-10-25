@@ -8,7 +8,14 @@ import {
   conceptCount,
   loadHistory,
 } from "../src/domain";
-import { pool, questions, unitIds, isCommonUnit } from "../src/data";
+import {
+  pool,
+  questions,
+  unitIds,
+  isCommonUnit,
+  isScenarioUnit,
+} from "../src/data";
+import { terminologyDefinitions } from "../src/terminology-content";
 describe("문제은행과 출제", () => {
   it("기존 완료 기록을 새 버전에서도 보존한다", () => {
     const previous = {
@@ -150,7 +157,7 @@ describe("문제은행과 출제", () => {
     expect(validateSession(tampered)).toBeNull();
   });
   it("공통 업무 60문항은 모두 조문과 처리 순서가 있는 자체 상황형이다", () => {
-    const common = unitIds.filter(isCommonUnit).flatMap(pool);
+    const common = unitIds.filter(isScenarioUnit).flatMap(pool);
     expect(common).toHaveLength(60);
     for (const q of common) {
       expect(q.scenario).toBe(true);
@@ -158,6 +165,27 @@ describe("문제은행과 출제", () => {
       expect(q.actionSteps?.length).toBeGreaterThanOrEqual(2);
       expect(q.evidenceCheckedAt).toBe("2026-10-25");
       expect(q.reviewedBy).toBeUndefined();
+    }
+  });
+  it("용어 문제는 120개 고유 정답과 용어 보기만 가지며 질문에 정답을 드러내지 않는다", () => {
+    const words = new Set(terminologyDefinitions.map((entry) => entry.term));
+    const items = pool("common-terms");
+    expect(words.size).toBe(120);
+    expect(items).toHaveLength(words.size);
+    expect(new Set(items.map((q) => q.options[q.answerIndex])).size).toBe(
+      words.size,
+    );
+    for (const q of items) {
+      expect(q.topic).toBe("용어·개념");
+      expect(q.scenario).toBeUndefined();
+      expect(q.actionSteps).toBeUndefined();
+      expect(q.citation).toBeTruthy();
+      expect(new Set(q.options).size).toBe(4);
+      expect(q.options.every((option) => words.has(option))).toBe(true);
+      const answer = q.options[q.answerIndex]
+        .replace(/\([^)]*\)/g, "")
+        .replace(/\s/g, "");
+      expect(q.prompt.replace(/\s/g, "")).not.toContain(answer);
     }
   });
   it.each([

@@ -40,12 +40,29 @@ test("Pages 하위 경로 자산, 직접 진입, 새로고침, 채점", async ({
   expect(errors).toEqual([]);
 });
 
+test("Pages 용어 퀴즈 직접 진입과 새로고침 복원", async ({ page }) => {
+  await page.goto("./#/setup/common-terms");
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "방위사업 용어 퀴즈", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".setup-summary")).toContainText("용어형 5문항");
+  await page.getByRole("button", { name: "학습 시작하기" }).click();
+  await expect(page.getByText("공통 업무 · 용어 퀴즈")).toBeVisible();
+  await expect(page.getByRole("radio")).toHaveCount(4);
+  await page.getByRole("radio").first().check();
+  await page.getByRole("button", { name: "다음 문제" }).click();
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.reload();
+  await expect(page.locator(".question-number")).toHaveText("QUESTION 02");
+});
+
 test("Pages 공통 업무 직접 진입과 계약 상황형·근거 확인", async ({ page }) => {
   await page.goto("./#/common");
   await expect(
     page.getByRole("heading", { name: "공통 업무 문제", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".unit-card")).toHaveCount(3);
+  await expect(page.locator(".unit-card")).toHaveCount(4);
   await page.goto("./#/setup/common-contract");
   await page.reload();
   await expect(page.locator(".setup-summary")).toContainText(

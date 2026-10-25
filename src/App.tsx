@@ -39,6 +39,7 @@ import {
   shipUnits,
   commonUnits,
   isCommonUnit,
+  isTerminologyUnit,
   pool,
   sources,
   type UnitId,
@@ -254,24 +255,26 @@ function Home() {
           <h2>
             방위사업 공통 업무
             <br />
-            상황별로 연습하기
+            상황과 용어로 연습하기
           </h2>
           <p>
             소요 수정부터 계약변경과 전력화지원까지,
             <br />
-            업무 상황에서 다음 조치를 판단해 보세요.
+            업무 상황을 판단하고 실무 용어를 익혀 보세요.
           </p>
           <Link to="/common" className="mint-button">
             공통 업무 문제 보기 <ArrowUpRight size={18} />
           </Link>
         </div>
         <div className="route-graphic">
-          {["획득·소요", "계약관리", "사업관리·시험평가"].map((s, i) => (
-            <div key={s}>
-              <span>{String(i + 1).padStart(2, "0")}</span>
-              <strong>{s}</strong>
-            </div>
-          ))}
+          {["획득·소요", "계약관리", "사업관리·시험평가", "방위사업 용어"].map(
+            (s, i) => (
+              <div key={s}>
+                <span>{String(i + 1).padStart(2, "0")}</span>
+                <strong>{s}</strong>
+              </div>
+            ),
+          )}
           <p>공통 업무는 별도 단원에서만 출제합니다</p>
         </div>
       </section>
@@ -323,11 +326,11 @@ function CommonLearning() {
     <>
       <div className="heading-row">
         <div>
-          <p className="eyebrow">방위사업 실무 상황 연습</p>
+          <p className="eyebrow">방위사업 실무 상황·용어 연습</p>
           <h1>공통 업무 문제</h1>
           <p className="muted">
-            상황을 읽고 담당자가 취할 다음 조치를 선택합니다. 함종별 문제와
-            섞이지 않습니다.
+            상황을 보고 다음 조치를 판단하거나, 정의·사용 상황에 맞는 용어를
+            고릅니다. 원하는 업무 단원에서 따로 연습하세요.
           </p>
         </div>
         <BookOpen size={48} aria-hidden="true" />
@@ -351,7 +354,8 @@ function CommonLearning() {
                     ? `최고 ${Math.max(...records.map((h) => h.score))}점`
                     : "아직 학습 전"}
                   <small>
-                    상황형 {pool(u.id).length}문항 · 5 / 10 / 20문제
+                    {isTerminologyUnit(u.id) ? "용어형" : "상황형"}{" "}
+                    {pool(u.id).length}문항 · 5 / 10 / 20문제
                   </small>
                 </span>
                 <ArrowUpRight size={20} />
@@ -364,11 +368,12 @@ function CommonLearning() {
         <Info size={18} />
         <p>
           <strong>
-            공식 법령과 공개자료를 바탕으로 만든 자체 상황형 문제입니다.
+            공식 법령과 공개자료를 바탕으로 만든 자체 학습 문제입니다.
           </strong>{" "}
           방위사업관리사 관련 업무 영역을 포함하며 실제 기출문제가 아닙니다.
-          해설에서 적용 조문과 처리 순서를 확인하세요. 실제 업무에는 해당 계약의
-          조건과 최신 규정을 함께 확인해야 합니다. 근거 확인 기준일: 2026.10.25.
+          상황형은 처리 순서를, 용어형은 정의와 유사 용어의 차이를 해설에서
+          확인하세요. 실제 업무에는 해당 계약의 조건과 최신 규정을 함께 확인해야
+          합니다. 근거 확인 기준일: 2026.10.25.
         </p>
       </aside>
     </>
@@ -425,7 +430,9 @@ function Setup() {
       <section className="white-panel">
         <h2>얼마나 풀어볼까요?</h2>
         <p className="muted">
-          모두 4지선다입니다. 문제와 보기는 매번 새롭게 섞입니다.
+          {isTerminologyUnit(unit.id)
+            ? "120개 용어에서 무작위로 출제합니다. 정의·사용 상황을 읽고 네 용어 중 하나를 고르세요."
+            : "모두 4지선다입니다. 문제와 보기는 매번 새롭게 섞입니다."}
         </p>
         <fieldset className="count-group">
           <legend className="sr-only">문제 수 선택</legend>
@@ -460,7 +467,7 @@ function Setup() {
           <strong>
             {plan
               ? isCommonUnit(unit.id)
-                ? `${unit.title} 상황형 ${plan.common}문항`
+                ? `${unit.title} ${isTerminologyUnit(unit.id) ? "용어형" : "상황형"} ${plan.common}문항`
                 : `${unit.title} 전용 ${plan.cases}문항 · 공통 혼합 없음`
               : "문제 수를 줄여 주세요"}
           </strong>
@@ -585,7 +592,11 @@ function Quiz() {
           <span className="stage-tag">{q.stage}</span>
           <span>
             {isCommonUnit(q.unitId) ? "공통 업무" : "함종 전용"} ·{" "}
-            {q.scenario ? "실무 상황형" : "객관식"}
+            {isTerminologyUnit(q.unitId)
+              ? "용어 퀴즈"
+              : q.scenario
+                ? "실무 상황형"
+                : "객관식"}
           </span>
         </div>
         <span className="question-number">
