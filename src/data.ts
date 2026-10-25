@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { humanReviews, retiredIds } from "./reviews";
 import { additionalRows, additionalSources } from "./content-expansion";
+import {
+  businessQuestions,
+  businessSources,
+  shipScenarios,
+} from "./business-content";
 export const unitIds = [
   "common-process",
   "destroyer",
@@ -9,15 +14,17 @@ export const unitIds = [
   "submarine",
   "mine-warfare",
   "support-rescue",
+  "common-contract",
+  "common-management",
 ] as const;
 export type UnitId = (typeof unitIds)[number];
 export const units = [
   {
     id: "common-process",
-    title: "함정 획득절차 한눈에 보기",
-    summary: "사업의 시작부터 함정 인도까지, 전체 흐름을 연결합니다.",
+    title: "획득·소요 실무",
+    summary: "소요 수정, 선행연구와 사업추진 판단을 상황으로 익힙니다.",
     icon: "book",
-    label: "공통 절차",
+    label: "공통 업무",
   },
   {
     id: "destroyer",
@@ -61,6 +68,20 @@ export const units = [
     icon: "buoy",
     label: "지원 전력",
   },
+  {
+    id: "common-contract",
+    title: "계약관리 실무",
+    summary: "계약변경, 납기, 검사·대가 지급과 하자 처리",
+    icon: "book",
+    label: "공통 업무",
+  },
+  {
+    id: "common-management",
+    title: "사업관리·시험평가",
+    summary: "위험관리, 형상관리와 전력화지원 상황을 판단합니다.",
+    icon: "compass",
+    label: "공통 업무",
+  },
 ] satisfies {
   id: UnitId;
   title: string;
@@ -68,6 +89,9 @@ export const units = [
   icon: string;
   label: string;
 }[];
+export const isCommonUnit = (id: UnitId) => id.startsWith("common-");
+export const shipUnits = units.filter((u) => !isCommonUnit(u.id));
+export const commonUnits = units.filter((u) => isCommonUnit(u.id));
 const doc = (id: number) =>
   `https://www.dapa.go.kr/dapa/doc/selectDoc.do?bbsSeq=326&docSeq=${id}&menuSeq=3069`;
 const dapaSources = {
@@ -144,8 +168,14 @@ export const sources = {
     };
   }),
   ...additionalSources,
+  ...businessSources,
 };
-export const topics = ["역할·임무", "장비·원리", "획득·사례"] as const;
+export const topics = [
+  "역할·임무",
+  "장비·원리",
+  "획득·사례",
+  "실무·상황",
+] as const;
 export const stages = [
   "소요·전략",
   "선행연구",
@@ -177,6 +207,9 @@ export const questionSchema = z.object({
   evidenceCheckedAt: z.string(),
   reviewedBy: z.string().optional(),
   verifiedAt: z.string().optional(),
+  scenario: z.boolean().optional(),
+  citation: z.string().optional(),
+  actionSteps: z.array(z.string().min(1)).min(2).max(3).optional(),
 });
 export type Question = z.infer<typeof questionSchema>;
 type Row = [
@@ -189,7 +222,7 @@ type Row = [
   explanation: string,
   sourceId: Question["sourceId"],
 ];
-const rows: Record<UnitId, Row[]> = {
+const rows: Partial<Record<UnitId, Row[]>> = {
   "common-process": [
     [
       "소요·전략",
@@ -849,7 +882,7 @@ const legacyConcepts: Record<string, string> = {
 };
 export const questions: Question[] = [
   ...unitIds.flatMap((unitId) =>
-    rows[unitId].map((r, i) => ({
+    (rows[unitId] ?? []).map((r, i) => ({
       id: `q-${unitId}-${String(i + 1).padStart(4, "0")}`,
       unitId,
       topic: legacyTopics[unitId]?.[i + 1] ?? "획득·사례",
@@ -885,22 +918,26 @@ export const questions: Question[] = [
       status: "published",
     })),
   ),
+  ...businessQuestions,
+  ...shipScenarios,
 ].map((q) => {
   const review = humanReviews[q.id];
   return {
     ...q,
-    status: retiredIds.includes(q.id)
-      ? "retired"
-      : review
-        ? "verified"
-        : "published",
+    status:
+      retiredIds.includes(q.id) ||
+      (q.unitId === "common-process" && !q.id.startsWith("q-business-"))
+        ? "retired"
+        : review
+          ? "verified"
+          : "published",
     ...review,
   } as Question;
 });
 export function pool(unitId: UnitId) {
   return questions.filter(
     (q) =>
-      (q.unitId === unitId || q.unitId === "common-process") &&
+      q.unitId === unitId &&
       (q.status === "verified" || q.status === "published"),
   );
 }

@@ -8,6 +8,31 @@
   --mint: #81e4d4;
   --muted: #637887;
 }
+.work-steps {
+  margin: 18px 0;
+  padding: 16px 20px;
+  border-left: 3px solid #06776e;
+  background: #eff8f5;
+  border-radius: 0 8px 8px 0;
+}
+.work-steps h4 {
+  margin: 0 0 8px;
+  color: #06776e;
+}
+.work-steps ol {
+  margin: 0;
+  padding-left: 22px;
+  line-height: 1.8;
+}
+.citation {
+  font-size: 0.88rem;
+  color: #536b7a;
+  overflow-wrap: anywhere;
+}
+.citation strong {
+  color: #06776e;
+  margin-right: 6px;
+}
 * {
   box-sizing: border-box;
 }

@@ -6,6 +6,7 @@ import {
   unitIds,
   type Question,
   type UnitId,
+  isCommonUnit,
 } from "./data";
 export const SESSION_KEY = "hamjeong.session.v2",
   HISTORY_KEY = "hamjeong.history.v1";
@@ -52,32 +53,16 @@ export function selectionPlan(
   available = pool(unitId),
 ) {
   if (![5, 10, 20].includes(count)) throw Error("지원하지 않는 문제 수입니다.");
-  const commonAvailable = conceptCount(
-    available.filter((q) => q.unitId === "common-process"),
-  );
-  if (unitId === "common-process") {
-    if (commonAvailable < count)
-      throw Error("서로 다른 개념의 문제가 부족합니다.");
-    return { cases: 0, common: count };
-  }
   const ownAvailable = conceptCount(
     available.filter((q) => q.unitId === unitId),
   );
-  const target = ({ 5: 4, 10: 7, 20: 15 } as Record<number, number>)[count];
-  // 부족해도 함종 비중은 절반 이상을 유지합니다. 홀수 5문항은 최소 3:2입니다.
-  const cases = Math.min(
-    ownAvailable,
-    Math.max(target, count - commonAvailable),
-  );
-  if (
-    cases < Math.ceil(count / 2) ||
-    commonAvailable < count - cases ||
-    conceptCount(available) < count
-  )
+  if (ownAvailable < count)
     throw Error(
-      "함종 문제를 절반 이상 구성할 수 없습니다. 문제 수를 줄여 주세요.",
+      "이 단원의 서로 다른 개념이 부족합니다. 문제 수를 줄여 주세요.",
     );
-  return { cases, common: count - cases };
+  return isCommonUnit(unitId)
+    ? { cases: 0, common: count }
+    : { cases: count, common: 0 };
 }
 
 function pickDiverse(
@@ -90,8 +75,8 @@ function pickDiverse(
   ];
   const selected: Question[] = [];
   // 핵심 역할을 먼저 포함하고 장비·사례를 순환해 한 분야로 쏠리지 않게 합니다.
-  const buckets = ["역할·임무", "장비·원리", "획득·사례"].map((topic) =>
-    unique.filter((q) => q.topic === topic),
+  const buckets = ["역할·임무", "장비·원리", "획득·사례", "실무·상황"].map(
+    (topic) => unique.filter((q) => q.topic === topic),
   );
   while (selected.length < count && buckets.some((b) => b.length)) {
     for (const bucket of buckets) {
@@ -120,29 +105,11 @@ export function createSession(
     if (selected.length !== ids.size || selected.length !== count)
       throw Error("복습할 문제를 확인할 수 없습니다.");
   } else {
-    const plan = selectionPlan(unitId, count, available);
-    const commonConcepts = new Set(
-      available
-        .filter((q) => q.unitId === "common-process")
-        .map((q) => q.concept),
+    selectionPlan(unitId, count, available);
+    selected = pickDiverse(
+      available.filter((q) => q.unitId === unitId),
+      count,
     );
-    const sharedBudget = commonConcepts.size - plan.common;
-    const cases = pickDiverse(
-      available.filter((q) => q.unitId !== "common-process"),
-      plan.cases,
-      (q, selected) =>
-        !commonConcepts.has(q.concept) ||
-        selected.filter((item) => commonConcepts.has(item.concept)).length <
-          sharedBudget,
-    );
-    const usedConcepts = new Set(cases.map((q) => q.concept));
-    const common = pickDiverse(
-      available.filter(
-        (q) => q.unitId === "common-process" && !usedConcepts.has(q.concept),
-      ),
-      plan.common,
-    );
-    selected = shuffled([...cases, ...common]);
   }
   if (selected.length !== count || count < 1 || count > 20)
     throw Error("문제 수가 맞지 않습니다.");
@@ -186,7 +153,7 @@ export function validateSession(value: unknown): Session | null {
       !original ||
       original.status === "retired" ||
       !["published", "verified"].includes(original.status) ||
-      !(original.unitId === s.unitId || original.unitId === "common-process")
+      original.unitId !== s.unitId
     )
       return null;
     if (
@@ -199,7 +166,10 @@ export function validateSession(value: unknown): Session | null {
       q.stage !== original.stage ||
       q.unitId !== original.unitId ||
       q.sourceId !== original.sourceId ||
-      q.explanation !== original.explanation
+      q.explanation !== original.explanation ||
+      q.scenario !== original.scenario ||
+      q.citation !== original.citation ||
+      JSON.stringify(q.actionSteps) !== JSON.stringify(original.actionSteps)
     )
       return null;
   }

@@ -34,7 +34,15 @@ import {
   History as HistoryIcon,
   Trash2,
 } from "lucide-react";
-import { units, pool, sources, type UnitId } from "./data";
+import {
+  units,
+  shipUnits,
+  commonUnits,
+  isCommonUnit,
+  pool,
+  sources,
+  type UnitId,
+} from "./data";
 import {
   createSession,
   loadSession,
@@ -136,7 +144,7 @@ export default function App() {
             <Compass />
           </span>
           <span>
-            함정길잡이<small>함정사업 획득절차 학습</small>
+            함정길잡이<small>함정 이해와 방위사업 실무 학습</small>
           </span>
         </Link>
         <nav aria-label="주 메뉴">
@@ -145,7 +153,13 @@ export default function App() {
             end
             className={({ isActive }) => (isActive ? "nav-active" : "")}
           >
-            학습 단원
+            함정사업 문제
+          </NavLink>
+          <NavLink
+            to="/common"
+            className={({ isActive }) => (isActive ? "nav-active" : "")}
+          >
+            공통 업무 문제
           </NavLink>
           <NavLink
             to="/map"
@@ -171,6 +185,7 @@ export default function App() {
       <main id="main" className="container" tabIndex={-1}>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/common" element={<CommonLearning />} />
           <Route path="/setup/:unitId" element={<Setup />} />
           <Route path="/quiz" element={<Quiz />} />
           <Route path="/result" element={<Result />} />
@@ -213,7 +228,7 @@ function Home() {
       <div className="heading-row">
         <div>
           <p className="eyebrow">처음 만나는 함정사업</p>
-          <h1>복잡한 절차, 한 문제씩 가까이.</h1>
+          <h1>함정 이해부터 업무 판단까지.</h1>
           <p className="muted">배울 단원을 고르고 나만의 속도로 시작하세요.</p>
         </div>
         <span className="compass-decoration">
@@ -234,44 +249,38 @@ function Home() {
       <section className="foundation">
         <div>
           <span className="light-label">
-            <BookOpen size={16} /> 처음이라면 여기서
+            <BookOpen size={16} /> 함종과 별도로 배우는 공통 업무
           </span>
           <h2>
-            함정 획득절차
+            방위사업 공통 업무
             <br />
-            한눈에 보기
+            상황별로 연습하기
           </h2>
           <p>
-            사업의 시작부터 함정 인도까지,
+            소요 수정부터 계약변경과 전력화지원까지,
             <br />
-            전체 흐름을 먼저 연결해 보세요.
+            업무 상황에서 다음 조치를 판단해 보세요.
           </p>
-          <Link to="/setup/common-process" className="mint-button">
-            공통 절차 학습하기 <ArrowUpRight size={18} />
+          <Link to="/common" className="mint-button">
+            공통 업무 문제 보기 <ArrowUpRight size={18} />
           </Link>
         </div>
         <div className="route-graphic">
-          {[
-            "소요 결정",
-            "선행연구",
-            "기본설계",
-            "상세설계·건조",
-            "시험평가",
-          ].map((s, i) => (
+          {["획득·소요", "계약관리", "사업관리·시험평가"].map((s, i) => (
             <div key={s}>
               <span>{String(i + 1).padStart(2, "0")}</span>
               <strong>{s}</strong>
             </div>
           ))}
-          <p>연구개발 방식의 주요 단계를 단순화한 학습 항로</p>
+          <p>공통 업무는 별도 단원에서만 출제합니다</p>
         </div>
       </section>
       <div className="section-heading">
-        <h2>함종별 학습</h2>
+        <h2>함정사업 문제</h2>
         <span className="muted">6개 단원 · 5 / 10 / 20문제</span>
       </div>
       <section className="unit-grid" aria-label="함종별 학습 단원">
-        {units.slice(1).map((u, i) => {
+        {shipUnits.map((u, i) => {
           const records = history.filter((h) => h.unitId === u.id && !h.retry);
           return (
             <Link className="unit-card" to={`/setup/${u.id}`} key={u.id}>
@@ -289,8 +298,7 @@ function Home() {
                     ? `최고 ${Math.max(...records.map((h) => h.score))}점`
                     : "아직 학습 전"}
                   <small>
-                    함종 {pool(u.id).filter((q) => q.unitId === u.id).length} ·
-                    공통 {pool("common-process").length}
+                    함종 전용 {pool(u.id).length}문항 · 공통 혼합 없음
                   </small>
                 </span>
                 <ArrowUpRight size={20} />
@@ -304,6 +312,63 @@ function Home() {
         <p>
           <strong>역할부터 이해하고, 획득절차로 연결하세요.</strong> 문제를 풀고
           나면 해설과 원문 출처를 함께 확인할 수 있습니다.
+        </p>
+      </aside>
+    </>
+  );
+}
+function CommonLearning() {
+  const history = loadHistory();
+  return (
+    <>
+      <div className="heading-row">
+        <div>
+          <p className="eyebrow">방위사업 실무 상황 연습</p>
+          <h1>공통 업무 문제</h1>
+          <p className="muted">
+            상황을 읽고 담당자가 취할 다음 조치를 선택합니다. 함종별 문제와
+            섞이지 않습니다.
+          </p>
+        </div>
+        <BookOpen size={48} aria-hidden="true" />
+      </div>
+      <section className="unit-grid" aria-label="공통 업무 학습 단원">
+        {commonUnits.map((u, i) => {
+          const records = history.filter((h) => h.unitId === u.id && !h.retry);
+          return (
+            <Link className="unit-card" to={`/setup/${u.id}`} key={u.id}>
+              <div className="card-top">
+                <span className="unit-icon">
+                  <Icon name={u.icon} size={27} />
+                </span>
+                <span className="unit-index">업무 0{i + 1}</span>
+              </div>
+              <h2>{u.title}</h2>
+              <p>{u.summary}</p>
+              <div className="card-bottom">
+                <span>
+                  {records.length
+                    ? `최고 ${Math.max(...records.map((h) => h.score))}점`
+                    : "아직 학습 전"}
+                  <small>
+                    상황형 {pool(u.id).length}문항 · 5 / 10 / 20문제
+                  </small>
+                </span>
+                <ArrowUpRight size={20} />
+              </div>
+            </Link>
+          );
+        })}
+      </section>
+      <aside className="notice">
+        <Info size={18} />
+        <p>
+          <strong>
+            공식 법령과 공개자료를 바탕으로 만든 자체 상황형 문제입니다.
+          </strong>{" "}
+          방위사업관리사 관련 업무 영역을 포함하며 실제 기출문제가 아닙니다.
+          해설에서 적용 조문과 처리 순서를 확인하세요. 실제 업무에는 해당 계약의
+          조건과 최신 규정을 함께 확인해야 합니다. 근거 확인 기준일: 2026.10.25.
         </p>
       </aside>
     </>
@@ -346,7 +411,7 @@ function Setup() {
   }
   return (
     <div className="narrow">
-      <Link className="back" to="/">
+      <Link className="back" to={isCommonUnit(unit.id) ? "/common" : "/"}>
         <ArrowLeft size={17} /> 단원 다시 선택
       </Link>
       <div className="setup-title">
@@ -393,11 +458,11 @@ function Setup() {
         <div className="setup-summary">
           <span>출제 구성</span>
           <strong>
-            {unit.id === "common-process"
-              ? "공통 획득절차"
-              : plan
-                ? `함종 핵심·사례 ${plan.cases} + 공통 절차 ${plan.common}`
-                : "문제 수를 줄여 주세요"}
+            {plan
+              ? isCommonUnit(unit.id)
+                ? `${unit.title} 상황형 ${plan.common}문항`
+                : `${unit.title} 전용 ${plan.cases}문항 · 공통 혼합 없음`
+              : "문제 수를 줄여 주세요"}
           </strong>
         </div>
         {error && (
@@ -519,7 +584,8 @@ function Quiz() {
         <div className="question-meta">
           <span className="stage-tag">{q.stage}</span>
           <span>
-            {q.unitId === "common-process" ? "공통 절차" : "함종 사례"} · 객관식
+            {isCommonUnit(q.unitId) ? "공통 업무" : "함종 전용"} ·{" "}
+            {q.scenario ? "실무 상황형" : "객관식"}
           </span>
         </div>
         <span className="question-number">
@@ -660,7 +726,7 @@ function Result({ review = false }: { review?: boolean }) {
           <p className="muted">
             {r.wrong.length
               ? "기억이 헷갈렸던 단계만 가볍게 복습해 보세요."
-              : "모든 문제를 맞혔습니다. 다른 함종의 사례도 살펴보세요."}
+              : "모든 문제를 맞혔습니다. 다른 단원의 상황과 사례도 살펴보세요."}
           </p>
           <span className="hint">
             {date(s.completedAt)} 완료 · 공개자료 기반 학습
@@ -720,6 +786,21 @@ function Result({ review = false }: { review?: boolean }) {
                   </p>
                 </div>
                 <p>{q.explanation}</p>
+                {q.actionSteps && (
+                  <div className="work-steps">
+                    <h4>업무 처리 순서</h4>
+                    <ol>
+                      {q.actionSteps.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                {q.citation && (
+                  <p className="citation">
+                    <strong>적용 근거</strong> {q.citation}
+                  </p>
+                )}
                 <a
                   className="source-link"
                   href={source.url}
@@ -731,7 +812,11 @@ function Result({ review = false }: { review?: boolean }) {
                 </a>
                 <div className="review-footer">
                   <small>
-                    {source.date ? `자료 게시 ${source.date}` : "게시일 미표기"}{" "}
+                    {"version" in source
+                      ? source.version
+                      : source.date
+                        ? `자료 게시 ${source.date}`
+                        : "게시일 미표기"}{" "}
                     · 근거 확인 {q.evidenceCheckedAt}
                   </small>
                   <label>
@@ -853,7 +938,7 @@ function ProcessMap() {
         </p>
       </aside>
       <Link className="primary" to="/setup/common-process">
-        공통 절차 문제 풀기 <ArrowRight size={18} />
+        획득·소요 상황 문제 풀기 <ArrowRight size={18} />
       </Link>
       <section className="sources-section">
         <h2>문제은행의 공개 출처</h2>
